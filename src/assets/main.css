@@ -1,0 +1,9 @@
+
+.slidebar-active-class {
+    color: #ffffff;
+}
+
+
+.slidebar-active-class:hover {
+    color: #ffffffbe;
+}
