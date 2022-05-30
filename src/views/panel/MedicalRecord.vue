@@ -1,7 +1,7 @@
 <script setup>
-    import { onMounted, ref } from 'vue'
+    import { onMounted, ref, reactive } from 'vue'
     import { useRoute } from 'vue-router'
-    import { getPatientData, getMedicalRecord, addMedicalRecord } from '@/firebase/patients'
+    import { getPatientData, getMedicalRecord, addMedicalRecord, getMedicalDocs, addMedicalDoc } from '@/firebase/patients'
 
     import TabView from 'primevue/tabview'
     import TabPanel from 'primevue/tabpanel'
@@ -12,42 +12,50 @@
     import Accordion from 'primevue/accordion'
     import AccordionTab from 'primevue/accordiontab'
     import Dialog from 'primevue/dialog'
-    import SpeedDial from 'primevue/speeddial'
-
-    import SplitButton from 'primevue/splitbutton'
+    import Chip from 'primevue/chip'
+    import ProgressSpinner from 'primevue/progressspinner'
+    import Calendar from 'primevue/calendar'
+    import Dropdown from 'primevue/dropdown'
+    import Textarea from 'primevue/textarea'
 
     // helpers
     import { patientAge } from '@/helpers/patients'
     import moment from 'moment'
+    
+    import Toast from 'primevue/toast'
+    import { useToast } from "primevue/usetoast"
+    const toast = useToast()
 
     const route = useRoute()
-    const displayDetails = ref(false)
+    // const displayDetails = ref(false)
 
-    const medicalRecordDocs = [
-        {label: 'Evolucion de enfermeria', icon: 'pi pi-book'},
-        {label: 'Evolucion Medica', icon: 'pi pi-plus'},
-        {label: 'Informe Ingreso', icon: 'pi pi-plus'},
-        {label: 'Informe de Egreso', icon: 'pi pi-book'},
-        {label: 'Nota Operatoria', icon: 'pi pi-plus'},
-        {label: 'Odenes Medicas', icon: 'pi pi-book'},
-    ]
+    // Cuando haga un nuevo documento necesitare esto
+    // const medicalRecordDocs = [
+    //     {label: 'Evolucion de enfermeria', icon: 'pi pi-book'},
+    //     {label: 'Evolucion Medica', icon: 'pi pi-plus'},
+    //     {label: 'Informe Ingreso', icon: 'pi pi-plus'},
+    //     {label: 'Informe de Egreso', icon: 'pi pi-book'},
+    //     {label: 'Nota Operatoria', icon: 'pi pi-plus'},
+    //     {label: 'Odenes Medicas', icon: 'pi pi-book'},
+    // ]
 
-    const newMedicalRecorditems = [
-        {
-            label: 'Consulta',
-            icon: 'pi pi-plus-circle',
-            command: () => {
-                console.log('Nueva historia de consulta')
-            }
-        },
-        {
-            label: 'Quirurgica',
-            icon: 'pi pi-plus-circle',
-            command: () => {
-                console.log('Nueva historia de Cirugia')
-            }
-        },
-    ]
+    // Items para boton tipo split tal vez no los use
+    // const newMedicalRecorditems = [
+    //     {
+    //         label: 'Consulta',
+    //         icon: 'pi pi-plus-circle',
+    //         command: () => {
+    //             console.log('Nueva historia de consulta')
+    //         }
+    //     },
+    //     {
+    //         label: 'Quirurgica',
+    //         icon: 'pi pi-plus-circle',
+    //         command: () => {
+    //             console.log('Nueva historia de Cirugia')
+    //         }
+    //     },
+    // ]
 
     const patient_id = ref('')
     var patientData = ref(null)
@@ -64,7 +72,7 @@
     var nationalityType = ref('')
     var cedula = ref('')
 
-    var medicalRecords = ref([])
+    const medicalRecords = ref([])
     
     patient_id.value = route.params.patientid
 
@@ -73,10 +81,67 @@
         console.log(docId)
     }
 
-    var diagnostic = ref('')
-    const showDetails = (data) => {
-        diagnostic.value = data.diagnostic
-        displayDetails.value = true
+    const medicalRecordsDocs = ref([])
+    const waitDetails = ref(false)
+    const showDetails = async (i) => {
+        waitDetails.value = true
+        const ids = await getMedicalRecord(id.value)
+        const medicalRecordId = ids.docs[i].id
+
+        const medicalRecordDocsSnap = await getMedicalDocs(id.value, medicalRecordId)
+        medicalRecordsDocs.value = medicalRecordDocsSnap.docs.map(doc => doc.data())
+        medicalRecords.value[i].medicalRecordsDocs = medicalRecordsDocs.value
+        waitDetails.value = false
+    }
+
+    const medicalDocForm = reactive([])
+    const showMedicalDoc = (i, j) => {
+        showMedicalDocForm.value = true
+        medicalDocForm.title =  medicalRecords.value[i].medicalRecordsDocs[j].title
+        medicalDocForm.content =  medicalRecords.value[i].medicalRecordsDocs[j].content
+        medicalDocForm.signedBy =  medicalRecords.value[i].medicalRecordsDocs[j].signedBy
+    }
+
+    
+    var showNewMedicalDocForm = ref(false)
+    var medicalDocDate = ref(new Date())
+    const medicalDocType = ['Informe Medico', 'Informe de Ingreso', 'Informe de Egreso', 'Nota Operatoria']
+
+    var newMedicalDocData = reactive({
+        title: '',
+        content: '',
+        createAt: medicalDocDate,
+        signedBy: '' // este campo se debe llenar con los datos del medico que se halla logueado
+    })
+
+    const newMedicalDocForm = () => {
+        showNewMedicalDocForm.value = true
+    }
+
+    const currentMedicalRecord = (state) => {
+        if (state == 'open') {
+            return ' - Historia Actual'
+        } else {
+            return ''
+        }
+    }
+
+    const showMedicalDocForm = ref(false)
+
+    const saveMedicalDoc = async () => {
+        const ids = await getMedicalRecord(id.value)
+        const idMedicalRecord = ids.docs[0].id
+        const idPatient = id.value
+        
+        const response = await addMedicalDoc(newMedicalDocData, idPatient, idMedicalRecord)
+        console.log(response)
+        if (response) {
+            toast.add({severity:'success', summary: 'Informe Guardado', detail: response.id, life: 4000})
+        } else {
+            toast.add({severity:'error', summary: 'Error', detail: 'Informe No fue Guardado' , life: 4000})
+
+        }
+        showNewMedicalDocForm.value = false
     }
 
     onMounted( async () => {
@@ -94,7 +159,6 @@
             hospitalized.value = doc.data().hospitaized
             nationalityType.value = doc.data().nationalityType
             cedula.value = nationalityType.value + "-" + patient_id.value
-
         })
         const medicalRecordsSnapShot = await getMedicalRecord(id.value)
         medicalRecords.value = medicalRecordsSnapShot.docs.map(doc => doc.data())
@@ -103,15 +167,7 @@
 </script>
 
 <template>
-    <div class="grid">
-        <div class="col-2 flex align-content-center">
-            <SplitButton label="Nueva Historia" icon="pi pi-plus" :model="newMedicalRecorditems" class="p-button-success"></SplitButton>
-        </div>
-        <div class="col-10">
-            <h1>Historia Medica</h1>
-        </div>
-
-    </div>
+    <Toast position="top-center" />
 
     <TabView>
         <TabPanel header="Datos Personales">
@@ -171,28 +227,88 @@
         <TabPanel header="Informacion de Contacto">
             Content III
         </TabPanel>
+        <TabPanel header="Historia Medica">
+            <div class="grid">
+                <div class="col-2 flex align-content-center">
+                    <Button label="Nuevo Ingreso" icon="pi pi-plus" class="p-button-success" :disabled="hospitalized"></Button>
+                </div>
+                <div class="col-2 flex align-content-center">
+                    <Button label="Nueva Consulta" icon="pi pi-plus" class="p-button-info"></Button>
+                </div>
+                <div class="col flex align-content-center justify-content-end">
+                    <Chip class="px-5 bg-blue-100" :label="`Paciente: ${name}`" />
+                </div>
+                
+                
+            </div>
+            <Accordion  :multiple="true" :activeIndex="0">
+                <AccordionTab v-for="(medicalRecord, index) in medicalRecords" :key="index" :header="`${moment(medicalRecord.createAt.seconds*1000).format('D-MMM-YYYY')} - ${medicalRecord.diagnostic} ${currentMedicalRecord(medicalRecord.state)}   `">
+                    <div class="col-2 flex align-content-center">
+                        <Button label="Nuevo Documento" icon="pi pi-plus" class="p-button-help" @click="newMedicalDocForm" :disabled="!hospitalized" v-if="medicalRecord.state=='open'"></Button>
+                    </div>
+                    <p class="text-justify">Enfermedad Actual: {{ medicalRecord.currentSick }}</p>
+                    <p class="text-justify">Plan: {{ medicalRecord.plan }}</p>
+
+                    <div class="col-4 flex flex-warp">
+                        <Button label="Ver Detalles" @click="showDetails(index)" icon="pi pi-plus" class="p-button-warning mb-3 min-w-min"></Button>
+                        <ProgressSpinner class="h-2rem mx-0" v-if="waitDetails"/>
+                    </div>
+
+                    <div class="flex justify-content-start">
+                        <Button class="p-button-outlined p-button-secondary mr-3" v-for="(doc, jindex) in medicalRecord.medicalRecordsDocs" :key="index" @click="showMedicalDoc(index, jindex)" >
+                            <font-awesome-icon icon="file-medical" size="2x" class="mr-1" />
+                            {{ doc.title }}
+                        </Button>
+                    </div>
+
+                    <!-- <SplitButton label="Save" icon="pi pi-plus" :model="medicalRecordDocs"></SplitButton> -->
+                    <!-- <SpeedDial :model="medicalRecordDocs" :radius="120" direction="up-right" type="quarter-circle" buttonClass="p-button-success" /> -->
+                            <!-- <Button type="button" class="p-button-help p-button-rounded" @click="showDetails(medicalRecord)">Ver Detalles</Button> -->
+                </AccordionTab>
+            </Accordion>
+        </TabPanel>
     </TabView>
 
-    <Accordion  :multiple="true">
-        <AccordionTab v-for="(medicalRecord, index) in medicalRecords" :key="index" :header="`${moment(medicalRecord.createAt.seconds*1000).format('D-MMM-YYYY')} - ${medicalRecord.diagnostic}`">
-            <p class="text-justify">Enfermedad Actual: {{ medicalRecord.currentSick }}</p>
-            <p class="text-justify">Plan: {{ medicalRecord.plan }}</p>
-            <SplitButton label="Save" icon="pi pi-plus" :model="medicalRecordDocs"></SplitButton>
-            <!-- <SpeedDial :model="medicalRecordDocs" :radius="120" direction="up-right" type="quarter-circle" buttonClass="p-button-success" /> -->
-                    <!-- <Button type="button" class="p-button-help p-button-rounded" @click="showDetails(medicalRecord)">Ver Detalles</Button> -->
-        </AccordionTab>
-    </Accordion>
 
     <Button  type="button" class="text-white mt-5" @click="saveMedicalRecor">Guardar Historia</Button>
 
-    <Dialog v-model:visible="displayDetails" :maximizable="true" class="m-5">
+    <Dialog v-model:visible="showMedicalDocForm" :maximizable="true" class="m-5 w-6 h-6">
         <template #header>
-            <h3>Detalles</h3>
+            <h3 class="font-bold"> {{ medicalDocForm.title }} </h3>
         </template>
-            {{ diagnostic }} <br><br>
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-            Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-            Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat
-            cupidatat non proi
+            
+            <p> {{ medicalDocForm.content }} </p>
+
+        <template #footer>
+                <h3 class="font-bold"> {{ medicalDocForm.signedBy }} </h3>
+        </template>
+    </Dialog>
+
+    <Dialog v-model:visible="showNewMedicalDocForm" class="m-5 max-w-max h-8">
+        <template #header>
+            <h3 class="font-bold"> Nuevo Documento Medico </h3>
+        </template>
+        <div class="flex justify-content-between">
+            <div>
+                <Dropdown v-model="newMedicalDocData.title" :options="medicalDocType" placeholder="Seleccione el Tipo de Informe" />
+            </div>
+            <div>
+                <Calendar v-model="medicalDocDate" dateFormat="dd/mm/yy" showIcon /><br>
+            </div>
+        </div>
+
+            <Textarea v-model="newMedicalDocData.content" rows="10" cols="80" :autoResize="true" class="mt-5" />
+
+        <template #footer>
+                <h3 class="font-bold"> Dr Jose Perez </h3>
+                <Button  type="button" class="text-white" @click="saveMedicalDoc">Guardar Historia</Button>
+        </template>
     </Dialog>
 </template>
+
+<style>
+    .p-disabled, .p-component:disabled  {
+        background-color: rgb(226, 226, 226);
+        border: 1px solid rgb(226, 226, 226);
+    }
+</style>

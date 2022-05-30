@@ -67,6 +67,13 @@ export const getPatientData = async  (id) => {
     return querySnapShot
 }
 
+export const getMedicalDocs = async (patientId, medicalRecordId) => {
+    const q = query(collection(db, `patients/${patientId}/medicalRecord/${medicalRecordId}/medicalDocs`))
+    const querySnapShot = await getDocs(q)
+    
+    return querySnapShot
+}
+
 export const getMedicalRecord = async  (id) => {
     const q = query(collection(db, `patients/${id}/medicalRecord`))
     const querySnapShot = await getDocs(q)
@@ -115,4 +122,18 @@ export const addMedicalRecord = async (id, mc, cs) => {
     })
 
     return docRef.id
+}
+
+export const addMedicalDoc = async (doc, idPatient, idMedicalRecord) => {
+    try {
+        const docRef = await addDoc(collection(db, `patients/${idPatient}/medicalRecord/${idMedicalRecord}/medicalDocs`), {
+            title: doc.title,
+            content : doc.content,
+            createAt: doc.createAt
+        })
+        return docRef.id
+    } catch(e) {
+        console.log(e)
+        return null
+    }
 }

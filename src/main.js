@@ -14,10 +14,10 @@ import { library } from '@fortawesome/fontawesome-svg-core'  // import the fonta
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'  // import font awesome icon component
 
 /* import specific icons */
-import { faEye, faWheelchairMove, faArrowRight, faUserDoctor, faClipboardUser, faFilter, faPlus, faPersonCane, faHouseMedical, faStaffAesculapius, faPersonDress, faPerson, faTruckMedical, faWarehouse, faScrewdriverWrench, faChartLine, faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
+import { faFileMedical, faEye, faWheelchairMove, faArrowRight, faUserDoctor, faClipboardUser, faFilter, faPlus, faPersonCane, faHouseMedical, faStaffAesculapius, faPersonDress, faPerson, faTruckMedical, faWarehouse, faScrewdriverWrench, faChartLine, faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
 
 /* add icons to the library */
-library.add( faEye, faWheelchairMove, faArrowRight, faUserDoctor, faFilter, faPlus, faClipboardUser, faPersonCane, faHouseMedical, faStaffAesculapius, faPersonDress, faPerson, faTruckMedical, faWarehouse, faScrewdriverWrench, faChartLine, faMagnifyingGlass)
+library.add( faFileMedical, faEye, faWheelchairMove, faArrowRight, faUserDoctor, faFilter, faPlus, faClipboardUser, faPersonCane, faHouseMedical, faStaffAesculapius, faPersonDress, faPerson, faTruckMedical, faWarehouse, faScrewdriverWrench, faChartLine, faMagnifyingGlass)
 
 import { firebaseApp } from '@/firebase/init.js'
 
