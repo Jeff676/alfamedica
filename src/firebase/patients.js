@@ -1,5 +1,5 @@
 import { firebaseApp } from '@/firebase/init.js'
-import { getFirestore, collection, addDoc, query, where, getDocs, limit, collectionGroup, doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { getFirestore, collection, addDoc, query, where, getDocs, limit, collectionGroup, doc, setDoc, serverTimestamp, updateDoc, orderBy } from 'firebase/firestore'
 
 const db = getFirestore(firebaseApp)
 
@@ -68,16 +68,17 @@ export const getPatientData = async  (id) => {
 }
 
 export const getMedicalDocs = async (patientId, medicalRecordId) => {
-    const q = query(collection(db, `patients/${patientId}/medicalRecord/${medicalRecordId}/medicalDocs`))
+    const q = query(collection(db, `patients/${patientId}/medicalRecords/${medicalRecordId}/medicalDocs`), orderBy("createAt"))
     const querySnapShot = await getDocs(q)
     
     return querySnapShot
 }
 
 export const getMedicalRecord = async  (id) => {
-    const q = query(collection(db, `patients/${id}/medicalRecord`))
+    console.log(id)
+    const q = query(collection(db, `patients/${id}/medicalRecords`))
     const querySnapShot = await getDocs(q)
-
+    console.log(querySnapShot.docs.length)
     return querySnapShot
     // const q = query(collectionGroup(db, 'M9xe4M0SJSIPOawH3fOV'), where("patient_id", "==", id))
 
@@ -113,27 +114,63 @@ export const getMedicalRecord = async  (id) => {
     // });
 }
 
-export const addMedicalRecord = async (id, mc, cs) => {
-    const collectionRef = collection(db, `patients/${id}/medicalRecords`)
-    const docRef = await addDoc(collectionRef, {
-        mc : mc,
-        currentSick : cs,
-        createAt: serverTimestamp()
-    })
+// *** create a new medical record ( nueva historia medica) *** //
 
-    return docRef.id
+export const addMedicalRecord = async (id, medicalRecordData) => {
+    try {
+        const collectionRef = collection(db, `patients/${id}/medicalRecords`)
+        const docRef = await addDoc(collectionRef, {
+            reasonForConsultation : medicalRecordData.reasonForConsultation,
+            currentIllness: medicalRecordData.currentIllness,
+            bloodPresure : medicalRecordData.bloodPresure,
+            heartRate : medicalRecordData.heartRate,
+            breathingFrequency : medicalRecordData.breathingFrequency,
+            weight : medicalRecordData.weight,
+            notes: medicalRecordData.notes,
+            diagnostic : medicalRecordData.diagnostic,
+            plan : medicalRecordData.plan,
+            state: 'open',
+            signBy: medicalRecordData.signBy,
+            createAt: serverTimestamp()
+        })
+    
+        return docRef.id
+    } catch(e) {
+        console.error(e)
+        return null
+    }
 }
 
 export const addMedicalDoc = async (doc, idPatient, idMedicalRecord) => {
     try {
-        const docRef = await addDoc(collection(db, `patients/${idPatient}/medicalRecord/${idMedicalRecord}/medicalDocs`), {
+        const docRef = await addDoc(collection(db, `patients/${idPatient}/medicalRecords/${idMedicalRecord}/medicalDocs`), {
             title: doc.title,
             content : doc.content,
             createAt: doc.createAt
         })
         return docRef.id
     } catch(e) {
-        console.log(e)
+        console.error(e)
         return null
+    }
+}
+
+// Update Personal and Family Backgrounds
+export const updateBackgrounds = async (idPatient, personalBackgrounds, familyBackgrounds) => {
+    try {
+        // const washingtonRef = doc(db, "cities", "DC")
+        const docRef = doc(db, "patients", idPatient)
+
+        await updateDoc(docRef, {
+            personalBackgrounds,
+            familyBackgrounds
+        })
+        // await updateDoc(washingtonRef, {
+        //     capital: true
+        //   });
+        return true
+    } catch(e) {
+        console.error(e)
+        return false
     }
 }

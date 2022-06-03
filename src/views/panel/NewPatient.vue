@@ -228,7 +228,7 @@
                     <label for="profesion">Profesion</label>
                 </span>
             </div>
-            <div class="field col-6">
+            <!-- <div class="field col-6">
                     <label for="hopitalized">Hospitalizar</label><br/>
                     <InputSwitch id="hopitalized" v-model="newPatient.hospitalized" /><br/>
                     <Dropdown class="mt-2" v-model="newPatient.doctor" :options="doctors" :filter="true" optionLabel="name" placeholder="A cargo de..." :disabled="!newPatient.hospitalized"/>
@@ -237,7 +237,7 @@
                     <label for="advise">En Espera para consulta</label><br/>
                     <InputSwitch id="advise" v-model="newPatient.waitingAdvise" /><br/>
                     <Dropdown class="mt-2" v-model="newPatient.doctorAdviser" :options="doctors" :filter="true" optionLabel="name" placeholder="A cargo de..." :disabled="!newPatient.waitingAdvise"/>
-            </div>
+            </div> -->
             <div class="col-12 justify-content-center">
                 <!-- <Button label="Guardar" icon="pi pi-check" class="bg-green-300 m-5"  @click="savePatient()" :disabled="disabledFields"/> -->
                 <Button label="Guardar" icon="pi pi-check" class="bg-green-300 m-5"  type="submit" :disabled="disabledFields"/>
