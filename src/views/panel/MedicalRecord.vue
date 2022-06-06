@@ -3,6 +3,7 @@
     import { useRoute } from 'vue-router'
     import { getPatientData, getMedicalRecord, addMedicalRecord, getMedicalDocs, addMedicalDoc, updateBackgrounds } from '@/firebase/patients'
 
+    // PrimeVue components
     import TabView from 'primevue/tabview'
     import TabPanel from 'primevue/tabpanel'
     import InputText from 'primevue/inputtext'
@@ -13,13 +14,18 @@
     import AccordionTab from 'primevue/accordiontab'
     import Dialog from 'primevue/dialog'
     import Chip from 'primevue/chip'
-    import ProgressSpinner from 'primevue/progressspinner'
+    // import ProgressSpinner from 'primevue/progressspinner'
     import Calendar from 'primevue/calendar'
     import Dropdown from 'primevue/dropdown'
     import Textarea from 'primevue/textarea'
+    // import Card from 'primevue/card'
+    import Fieldset from 'primevue/fieldset';
+
+    import Evolutions from '../../components/Evolutions.vue'
 
     // helpers
     import { patientAge } from '@/helpers/patients'
+    // import { fixLocalTimeVZLA } from '@/helpers/fixLocalTimeVZLA'
     import moment from 'moment'
     
     import Toast from 'primevue/toast'
@@ -49,7 +55,6 @@
     
     patient_id.value = route.params.patientid
 
-
     var disabledBasicDatafields = ref(true)
     var disabledBackgorunds = ref(true)
 
@@ -65,7 +70,6 @@
         const medicalRecordId = ids.docs[i].id
 
         const medicalRecordDocsSnap = await getMedicalDocs(id.value, medicalRecordId)
-        console.log(medicalRecordDocsSnap.docs.length)
         if (medicalRecordDocsSnap.docs.length > 0) {
             medicalRecordsDocs.value = medicalRecordDocsSnap.docs.map(doc => doc.data())
             medicalRecords.value[i].medicalRecordsDocs = medicalRecordsDocs.value
@@ -87,7 +91,7 @@
         medicalDocForm.signedBy =  medicalRecords.value[i].medicalRecordsDocs[j].signedBy
     }
 
-    
+
     var medicalDocDate = ref(new Date())
     const medicalDocType = ['Informe Medico', 'Informe de Ingreso', 'Informe de Egreso', 'Nota Operatoria']
 
@@ -114,20 +118,23 @@
         }
     }
 
+    var waitSaveMedicalDoc = ref(false)
 
     const saveMedicalDoc = async () => {
+        waitSaveMedicalDoc.value = true
         const ids = await getMedicalRecord(id.value)
         const idMedicalRecord = ids.docs[0].id
         const idPatient = id.value
         
         const response = await addMedicalDoc(newMedicalDocData, idPatient, idMedicalRecord)
-        console.log(response)
         if (response) {
+            newMedicalDocData.title = ''
+            newMedicalDocData.content = ''
             toast.add({severity:'success', summary: 'Informe Guardado', detail: response.id, life: 4000})
-
+            waitSaveMedicalDoc.value = false
         } else {
             toast.add({severity:'error', summary: 'Error', detail: 'Informe No fue Guardado' , life: 4000})
-
+            waitSaveMedicalDoc.value = false
         }
         showNewMedicalDocForm.value = false
     }
@@ -195,7 +202,6 @@
         })
         const medicalRecordsSnapShot = await getMedicalRecord(id.value)
         medicalRecords.value = medicalRecordsSnapShot.docs.map(doc => doc.data())
-        console.table(medicalRecords.value)
         disabledNewEntryButton.value = medicalRecords.value[0].state =='open' ? true : false
 
     })
@@ -293,16 +299,80 @@
                 </div>
             </div>
             <Accordion :activeIndex="0">
-                <AccordionTab v-for="(medicalRecord, index) in medicalRecords" :key="index" :header="`${moment(medicalRecord.createAt.seconds*1000).format('D-MMM-YYYY')} - ${medicalRecord.diagnostic} ${currentMedicalRecord(medicalRecord.state)}   `">
-                    <div class="col-2 flex align-content-center">
-                        <Button label="Nuevo Documento" icon="pi pi-plus" class="p-button-help" @click="newMedicalDocForm" :disabled="!hospitalized" v-if="medicalRecord.state=='open'"></Button>
-                    </div>
-                    <p class="text-justify">Enfermedad Actual: {{ medicalRecord.currentIllness }}</p>
-                    <p class="text-justify">Plan: {{ medicalRecord.plan }}</p>
+                <AccordionTab v-for="(medicalRecord, index) in medicalRecords" :key="index" :header="`${moment(medicalRecord.createAt.seconds*1000).format('D-MMMM-YYYY')} - ${medicalRecord.diagnostic} ${currentMedicalRecord(medicalRecord.state)}   `">
+                    <Fieldset :toggleable="true" :collapsed="true">
+                        <template #legend class="">
+                            <span class="font-xl font-bold">{{ name }}</span>
+                            {{ cedula }} <br/>
+                            {{ age }}
+                        </template>
+                        Content
+                        <div class="grid">
+                            <span class="p-float-label text-left mt-3 col-12">
+                                <Textarea :autoResize="true" id="reasonForConsultation" type="text" v-model="medicalRecord.reasonForConsultation" class="w-full"/>
+                                <label for="reasonForConsultation" class="m-1">Motivo de Consulta</label>
+                            </span>
+                            
+                            <span class="p-float-label text-left col-12">
+                                <Textarea rows="5" id="currentIllness" type="text" v-model="medicalRecord.currentIllness" class="w-full"/>
+                                <label for="currentIllness" class="m-1">Enfermedad Actual</label>
+                            </span>
 
-                    <div class="col-4 flex flex-warp">
-                        <Button label="Ver Documentos" @click="showDetails(index)" icon="pi pi-plus" class="p-button-warning mb-3 min-w-min"></Button>
-                        <ProgressSpinner class="h-2rem mx-0" v-if="waitDetails"/>
+                            <span class="p-float-label text-left mt-4 col-3">
+                                <InputText id="bloodPresure" type="text" class="col-12" v-model="medicalRecord.bloodPresure"/>
+                                <label for="bloodPresure" class="text-sm ml-1">Tension Arterial</label>
+                            </span>
+
+                            <span class="p-float-label text-left mt-4 col-3">
+                                <InputText id="heartRate" type="text" class="col-12" v-model="medicalRecord.heartRate"/>
+                                <label for="heartRate" class="text-xs ml-1">Frecuencia Cardiaca</label>
+                            </span>
+
+                            <span class="p-float-label text-left mt-4 col-3">
+                                <InputText id="breathingFrequency" class="col-12" type="text"  v-model="medicalRecord.breathingFrequency"/>
+                                <label for="breathingFrequency" class="text-xs ml-1">Frecuencia Respiratoria</label>
+                            </span>
+
+                            <span class="p-float-label text-left mt-4 col-3">
+                                <InputText id="weight" type="text" class="col-12" v-model="medicalRecord.weight"/>
+                                <label for="weight" class="text-sm ml-1">Peso</label>
+                            </span>
+
+                            <span class="p-float-label text-left col-12 mt-2">
+                                <Textarea rows="5" id="notes" type="text" v-model="medicalRecord.notes" class="w-full"/>
+                                <label for="notes" class="m-1">Observaciones</label>
+                            </span>
+
+                            <span class="p-float-label text-left col-12 mt-3">
+                                <InputText id="diagnostic" type="text" v-model="medicalRecord.diagnostic" class="w-full"/>
+                                <label for="diagnostic" class="ml-1">Diagnostico</label>
+                            </span>
+
+                            <span class="p-float-label col-12 mt-3">
+                                <InputText id="plan" type="text" v-model="medicalRecord.plan" class="w-full"/>
+                                <label for="plan" class="ml-1">Plan</label>
+                            </span>
+                        </div>
+                    </Fieldset>
+
+                            <!-- <p>Enfermedad Actual: {{ medicalRecord.currentIllness }}</p>
+                            <p>Plan: {{ medicalRecord.plan }}</p> -->
+                    
+                    <div class="flex">
+                        <div class="col-3 flex flex-warp">
+                            <Button label="Nuevo Informe" icon="pi pi-plus" class="p-button-help mb-3 w-full" @click="newMedicalDocForm" :disabled="!hospitalized" v-if="medicalRecord.state=='open'"></Button>
+                        </div>
+
+                        <div class="col-3 flex flex-warp">
+                            <Button label="Ver Informes" @click="showDetails(index)" :loading="waitDetails" icon="pi pi-eye" class="p-button-warning mb-3 w-full"></Button>
+                        </div>
+                        
+                        <div class="col-3 flex flex-warp">
+                            <Evolutions title="Evolucion Medica" :id="id" evolutionType="medicalEvolution" />
+                        </div>
+                        <div class="col-3 flex flex-warp">
+                            <Evolutions title="Evolucion de Enfermeria" :id="id" evolutionType="nurseEvolution" />
+                        </div>
                     </div>
 
                     <p v-if="medicalDocExiste">No existen Domuentos</p>
@@ -316,10 +386,6 @@
                             </div>
                         </Button>
                     </div>
-
-                    <!-- <SplitButton label="Save" icon="pi pi-plus" :model="medicalRecordDocs"></SplitButton> -->
-                    <!-- <SpeedDial :model="medicalRecordDocs" :radius="120" direction="up-right" type="quarter-circle" buttonClass="p-button-success" /> -->
-                            <!-- <Button type="button" class="p-button-help p-button-rounded" @click="showDetails(medicalRecord)">Ver Detalles</Button> -->
                 </AccordionTab>
             </Accordion>
         </TabPanel>
@@ -380,8 +446,8 @@
         <template #footer>
             <div class="flex justify-content-between align-items-center">
                 <div>
-                    <Button label="Guardar" icon="pi pi-plus" class="p-button-success m-2" @click="newEntry"></Button>
-                    <Button label="Cancelar" icon="pi pi-plus" class="p-button-danger m-2" @click=""></Button>
+                    <Button label="Guardar" icon="pi pi-save" class="p-button-success m-2" @click="newEntry"></Button>
+                    <Button label="Cancelar" icon="pi pi-times" class="p-button-danger m-2" @click=""></Button>
                 </div>
                 
                 <span class="font-bold">SignedBy Doctor</span>
@@ -418,10 +484,9 @@
 
         <template #footer>
                 <h3 class="font-bold"> Dr Jose Perez </h3>
-                <Button  type="button" class="text-white" @click="saveMedicalDoc">Guardar Historia</Button>
+                <Button label="Guardar Informe" type="button" class="text-white m-2" @click="saveMedicalDoc" :loading="waitSaveMedicalDoc" icon="pi pi-save"></Button>
         </template>
     </Dialog>
-
 
 </template>
 
