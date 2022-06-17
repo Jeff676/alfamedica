@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted, reactive } from 'vue'
+    import { ref, onMounted } from 'vue'
     import { useRouter } from 'vue-router'
 
     // Prime Flex DataTable

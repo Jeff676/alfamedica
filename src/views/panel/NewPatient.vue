@@ -16,6 +16,8 @@
     import InputMask from 'primevue/inputmask'
     import InputSwitch from 'primevue/inputswitch'
     import Button from 'primevue/button'
+    import ConfirmDialog from 'primevue/confirmdialog'
+    import { useConfirm } from "primevue/useconfirm"
 
     const toast = useToast()
     const router = useRouter()
@@ -62,14 +64,6 @@
         newPatient.doctorAdviser = ''
     }
 
-    // Example Doctors
-    const doctors = [
-        {name: 'Dra Torrealba'},
-        {name: 'Dr Medina'},
-        {name: 'Dr Colmenarez'},
-        {name: 'Dra Paez'}
-    ]
-
     var disabledFields = ref(true)
 
     const genders = [
@@ -80,6 +74,8 @@
     const nationalityType = ref([ "V", "E" ])
 
     const waitting = ref(false)
+    const inputName = ref(null)
+    const confirm = useConfirm()
 
     // check if patient exist
     const checkId = async () => {
@@ -93,9 +89,22 @@
         waitting.value = false
 
         if (verificated) {
-            toast.add({severity:'error', summary: 'Paciente Ya Existe', detail:'Verifique la Cedula', life: 4000});
+            confirm.require({
+                message: 'Desea ver su historia?',
+                header: 'El paciente Existe',
+                icon: 'pi pi-exclamation-triangle',
+                accept: () => {
+                     router.push({name: 'medicalRecord', params: {patientid: newPatient.patient_id}})
+                },
+                reject: () => {
+                    toast.add({severity:'error', summary:'El paciente Existe', detail:'Por Favor Verifique su cedula', life: 3000})
+                    inputCedulaRef.value.$el.focus()
+                }
+            });
+            // toast.add({severity:'error', summary: 'Paciente Ya Existe', detail:'Verifique la Cedula', life: 4000})
         } else {
             disabledFields.value = false
+            setTimeout(() => inputName.value.$el.focus(), 500)
         }
     }
 
@@ -138,6 +147,8 @@
     <!-- Important messages -->
     <Toast position="top-center" />
 
+    <ConfirmDialog></ConfirmDialog>
+
 
     <h1>Nuevo Paciente</h1>
      <form class="fromgrid grid" @submit.prevent="savePatient()">
@@ -154,9 +165,9 @@
                 <Button label="Verificar" icon="pi pi-check" class="bg-green-300" @click="checkId()"/>
             </div>
 
-            <div class="field col-12">
+            <div class="field col-12" >
                 <span class="p-float-label">
-                    <InputText id="inputName" type="text" v-model="newPatient.name"  style="width:100%" :disabled="disabledFields"/>
+                    <InputText id="inputName" type="text" v-model="newPatient.name" :disabled="disabledFields" ref="inputName" style="width:100%" />
                     <label for="inputName">Nombres y Apellidos</label>
                 </span>
             </div>
@@ -228,12 +239,11 @@
                     <label for="profesion">Profesion</label>
                 </span>
             </div>
-            <!-- <div class="field col-6">
-                    <label for="hopitalized">Hospitalizar</label><br/>
-                    <InputSwitch id="hopitalized" v-model="newPatient.hospitalized" /><br/>
-                    <Dropdown class="mt-2" v-model="newPatient.doctor" :options="doctors" :filter="true" optionLabel="name" placeholder="A cargo de..." :disabled="!newPatient.hospitalized"/>
+             <div class="flex col-6 align-content-center justify-content-center gap-3">
+                <label for="hopitalized">Hospitalizar</label>
+                <InputSwitch id="hopitalized" v-model="newPatient.hospitalized" />
             </div>
-            <div class="field col-6">
+            <!--<div class="field col-6">
                     <label for="advise">En Espera para consulta</label><br/>
                     <InputSwitch id="advise" v-model="newPatient.waitingAdvise" /><br/>
                     <Dropdown class="mt-2" v-model="newPatient.doctorAdviser" :options="doctors" :filter="true" optionLabel="name" placeholder="A cargo de..." :disabled="!newPatient.waitingAdvise"/>
