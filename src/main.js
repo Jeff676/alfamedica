@@ -15,12 +15,12 @@ import { library } from '@fortawesome/fontawesome-svg-core'  // import the fonta
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'  // import font awesome icon component
 
 /* import specific icons */
-import { faSyringe, faListCheck, faFileCircleXmark, faFileMedical, faEye, faWheelchairMove, faArrowRight, faUserDoctor, faClipboardUser, faFilter, faPlus, faPersonCane, faHouseMedical, faStaffAesculapius, faPersonDress, faPerson, faTruckMedical, faWarehouse, faScrewdriverWrench, faChartLine, faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
+import { faArrowRotateRight, faGear, faSyringe, faListCheck, faFileCircleXmark, faFileMedical, faEye, faWheelchairMove, faArrowRight, faUserDoctor, faClipboardUser, faFilter, faPlus, faPersonCane, faHouseMedical, faStaffAesculapius, faPersonDress, faPerson, faTruckMedical, faWarehouse, faScrewdriverWrench, faChartLine, faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
 
 import moment from 'moment'
 
 /* add icons to the library */
-library.add( faSyringe, faListCheck, faFileCircleXmark, faFileMedical, faEye, faWheelchairMove, faArrowRight, faUserDoctor, faFilter, faPlus, faClipboardUser, faPersonCane, faHouseMedical, faStaffAesculapius, faPersonDress, faPerson, faTruckMedical, faWarehouse, faScrewdriverWrench, faChartLine, faMagnifyingGlass)
+library.add( faArrowRotateRight, faGear, faSyringe, faListCheck, faFileCircleXmark, faFileMedical, faEye, faWheelchairMove, faArrowRight, faUserDoctor, faFilter, faPlus, faClipboardUser, faPersonCane, faHouseMedical, faStaffAesculapius, faPersonDress, faPerson, faTruckMedical, faWarehouse, faScrewdriverWrench, faChartLine, faMagnifyingGlass)
 
 import { firebaseApp } from '@/firebase/init.js'
 

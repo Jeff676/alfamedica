@@ -21,6 +21,7 @@
         {to: '/panel/patients', icon: 'wheelchair-move', name: 'Pacientes'},
         {to: '/panel/doctors', icon: 'user-doctor', name: 'Medicos'},
         {to: '/panel/kpis', icon: 'chart-line', name: 'Indicadores'},
+        {to: '/panel/kpis', icon: 'gear', name: 'Configuracion'},
 
     ]
 

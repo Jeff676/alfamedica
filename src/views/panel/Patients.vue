@@ -22,6 +22,11 @@
     // bd functions
     import { getPatients } from '@/firebase/patients'
 
+    
+    import Toast from 'primevue/toast'
+    import { useToast } from "primevue/usetoast"
+    const toast = useToast()
+
     const router = useRouter()
 
     const selectedPatient = []
@@ -52,16 +57,22 @@
     }
 
     var patients = ref([])
-
-    onMounted(async () => {
+    const initPatients = async () => {
         patients.value = await getPatients()
+        if (patients.value.length == 0) {
+            toast.add({severity:'error', summary: 'Error al obtener pacientes', detail: 'Intentelo de Nuevo', life: 4000})
+        }
+    }
+
+    onMounted(() => {
+            initPatients()
     })
 </script>
 
 
 <template>
     <!-- Important messages -->
-    <!-- <Toast position="top-center" /> -->
+    <Toast position="top-center" />
 
     <div>
         <!-- Patients List -->
@@ -93,6 +104,7 @@
         </template>
 
         <template #empty>
+            <Button class="p-button-warning" @click="initPatients" v-tooltip="'Obtener Pacientes Nuevamente'"><font-awesome-icon icon="arrow-rotate-right"/></Button>
             No se han encontrado pacientes
         </template>
         <template #loading>

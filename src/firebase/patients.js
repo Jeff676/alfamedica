@@ -29,6 +29,7 @@ export const add_patient = async (newPatient) => {
             patient_id: newPatient.patient_id,
             name: newPatient.name,
             nationalityType: newPatient.nationalityType,
+            birthCity: newPatient.birthCity,
             birthday: new Date(newPatient.birthday),
             size: newPatient.size,
             gender: newPatient.gender.value,
@@ -73,7 +74,11 @@ export const getPatients = async () => {
 export const getActivePatients = async () => {
     var openMedicalRecords = []
     const patientsRef = collection(db, "patients")
-    const q = query(patientsRef, where("hospitalized", "==", true))
+    // Descomentar la siguiente linea cuando el indice se halla creado
+    const q = query(patientsRef, where("hospitalized", "==", true), orderBy("name"))
+    
+    // Eliminar la siguiente linea cuando el indice se halla creado
+    // const q = query(patientsRef, where("hospitalized", "==", true))
     const patientsSnapShot = await getDocs(q)
     const patients = patientsSnapShot.docs.map(doc => doc.data())
 
@@ -131,9 +136,17 @@ export const getMedicalDocs = async (patientId, medicalRecordId) => {
 }
 
 export const getMedicalRecord = async  (id) => {
-    const q = query(collection(db, `patients/${id}/medicalRecords`))
-    const querySnapShot = await getDocs(q)
+    const q = query(collection(db, `patients/${id}/medicalRecords`), orderBy("createAt", "desc"))
+    const querySnapShot =  await getDocs(q)
     return querySnapShot
+}
+
+export const onGetMedicalRecord = async (id, callback) => {
+    onSnapshot(collection(db, `patients/${id}/medicalRecords`), callback)
+}
+
+export const onGetMedicalRecordDocs = async (id, medicalRecordId, callback) => {
+    onSnapshot(collection(db, `patients/${id}/medicalRecords/${medicalRecordId}/medicalDocs`), callback)
 }
 
 

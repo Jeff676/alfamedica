@@ -1,14 +1,13 @@
 <script setup>
     import { onMounted, ref, reactive } from 'vue'
     import { useRoute } from 'vue-router'
-    import { getMedicalOrders, addMedicalOrders, getPatientData, getMedicalRecord, addMedicalRecord, getMedicalDocs, addMedicalDoc, updateBackgrounds, updateBasicInfo, updateState } from '@/firebase/patients'
+    import { onGetMedicalRecordDocs, onGetMedicalRecord, getMedicalOrders, addMedicalOrders, getPatientData, getMedicalRecord, addMedicalRecord, getMedicalDocs, addMedicalDoc, updateBackgrounds, updateBasicInfo, updateState } from '@/firebase/patients'
 
     // PrimeVue components
     import TabView from 'primevue/tabview'
     import TabPanel from 'primevue/tabpanel'
     import InputText from 'primevue/inputtext'
     import Image from 'primevue/image'
-    import InputSwitch from 'primevue/inputswitch'
     import Button from 'primevue/button'
     import Accordion from 'primevue/accordion'
     import AccordionTab from 'primevue/accordiontab'
@@ -20,13 +19,15 @@
     import Fieldset from 'primevue/fieldset'
     import SplitButton from 'primevue/splitbutton'
     import SelectButton from 'primevue/selectbutton'
-    import Divider from 'primevue/divider'
+    import DataTable from 'primevue/datatable'
+    import Column from 'primevue/column'
+    import ColumnGroup from 'primevue/columngroup'
+    import Row from 'primevue/row'
 
     import Evolutions from '../../components/Evolutions.vue'
 
     // helpers
     import { patientAge } from '@/helpers/patients'
-    // import { fixLocalTimeVZLA } from '@/helpers/fixLocalTimeVZLA'
     import moment from 'moment'
     
     import Toast from 'primevue/toast'
@@ -40,7 +41,7 @@
     var id = ref('')
     var name = ref('')
     var profesion = ref('')
-    var weight = ref(0)
+    var birthCity = ref('')
     var size = ref('')
     var age = ref(0)
     var gender = ref('')
@@ -80,22 +81,37 @@
 
     var medicalDocExiste = ref(false)
 
+    const medicalRecordsContainer = ref(null)
+
     const showDetails = async (i) => {
         waitDetails.value = true
         const ids = await getMedicalRecord(id.value)
         const medicalRecordId = ids.docs[i].id
 
-        const medicalRecordDocsSnap = await getMedicalDocs(id.value, medicalRecordId)
-        if (medicalRecordDocsSnap.docs.length > 0) {
-            medicalRecordsDocs.value = medicalRecordDocsSnap.docs.map(doc => doc.data())
-            medicalRecords.value[i].medicalRecordsDocs = medicalRecordsDocs.value
-            medicalDocExiste.value = false
-        } else {
-            medicalDocExiste.value = true
-        }
+        var medicalRecordDocsSnap = []
 
-        waitDetails.value = false
+        onGetMedicalRecordDocs(id.value, medicalRecordId, async () => {
+            medicalRecordDocsSnap = await getMedicalDocs(id.value, medicalRecordId)
+    
+            if (medicalRecordDocsSnap.docs.length > 0) {
+                medicalRecordsDocs.value = medicalRecordDocsSnap.docs.map(doc => doc.data())
+                medicalRecords.value[i].medicalRecordsDocs = medicalRecordsDocs.value
+                medicalDocExiste.value = false
+            } else {
+                medicalDocExiste.value = true
+            }
+    
+            waitDetails.value = false
+            
+            setTimeout(() => {
+                medicalRecordsContainer.value.$el.parentNode.scrollTo({
+                top: screen.height,
+                behavior: 'smooth'
+            })
+            }, 500)
+        })
     }
+
 
     const showMedicalDocForm = ref(false)
     const medicalDocForm = reactive([])
@@ -209,7 +225,6 @@
         if (response) {
             toast.add({severity:'success', summary: 'Alta Medica con Exito', detail: response.id, life: 4000})
             displayNewEntryForm.value = false
-            console.log(response)
         } else {
             toast.add({severity:'error', summary: 'Error', detail: 'Error al Realizar Alta Medica' , life: 4000})
         }
@@ -230,7 +245,7 @@
             id.value = doc.id
             name.value = doc.data().name
             profesion.value = doc.data().profesion
-            weight.value = doc.data().weight
+            birthCity.value = doc.data().birthCity
             size.value = doc.data().size
             age.value = patientAge(doc.data().birthday)
             gender.value = doc.data().gender == 'm' ? 'Masculino' : 'Femenino'
@@ -247,6 +262,7 @@
     // *** Var Init ***
     const displayMedicalOrdersForm = ref(false)
     const displayMedicalOrders = ref(false)
+    const displayMedicineControl = ref(false)
     const medicalOrderType = ref(['Medicamentos', 'Comentarios u Otros'])
     var orderType = ref('Medicamentos')
 
@@ -287,6 +303,17 @@
     const posology = ref(null)
     const notes = ref(null)
     const customOrder = ref(null)
+    const frecuency = [
+        {description: 'Stat', frecuency: 0},
+        {description: 'Cada hora', frecuency: 1},
+        {description: 'Cada 2 horas', frecuency: 2},
+        {description: 'Cada 4 horas', frecuency: 4},
+        {description: 'Cada 6 horas', frecuency: 6},
+        {description: 'Cada 8 horas', frecuency: 8},
+        {description: 'Cada 12 horas', frecuency: 12},
+        {description: 'Una vez al dia', frecuency: 24},
+
+    ]
 
 
     const addMedicalOrder = () => {
@@ -317,15 +344,45 @@
         activeIndexPanelPatient.value = 3
     }
 
+    const medicineControlList = ref([])
+    const dataTable = ref([])
+    const calMedicinesFrecuency = async () => {
+        const ids = await getMedicalRecord(id.value)
+        const idMedicalRecord = ids.docs[0].id
+        const idPatient = id.value
+
+        medicineControlList.value = await getMedicalOrders(idPatient, idMedicalRecord)
+        medicineControlList.value.map((orders) => {
+            orders.orders.map((order) => {
+                if (order.medicine != null) {
+                    dataTable.value.push(order)
+                }
+            })
+            })
+        console.log(dataTable.value)
+    }
+
+    const resetMedicalOrders = () => {
+         medicine.value = null
+         posology.value = null
+         notes.value = null
+         customOrder.value = null
+    }
+
     const activeIndexPanelPatient = ref(0)
+
 
     onMounted( async () => {
         patientData = await getPatientData(patient_id.value)
         setPatientData()
-        const medicalRecordsSnapShot = await getMedicalRecord(id.value)
-        medicalRecords.value = medicalRecordsSnapShot.docs.map(doc => doc.data())
-        medicalRecordIsOpen.value = medicalRecords.value[0].state =='open' ? true : false
 
+        var medicalRecordsSnapShot = []
+        await onGetMedicalRecord(id.value, async () => {
+            medicalRecordsSnapShot = await getMedicalRecord(id.value)
+            medicalRecords.value = medicalRecordsSnapShot.docs.map(doc => doc.data())
+            medicalRecordIsOpen.value = medicalRecords.value[0].state =='open' ? true : false
+
+        } )
     })
 
 </script>
@@ -333,12 +390,12 @@
 <template>
     <Toast position="top-center" />
 
-    <TabView :activeIndex="activeIndexPanelPatient">
-        <!-- *** PERSONAL INFORMATION *** -->
+    <TabView :activeIndex="activeIndexPanelPatient" ref="medicalRecordsContainer">
+    <!-- *** PERSONAL INFORMATION *** -->
         <TabPanel header="Datos Personales">
             <div class="grid">
                 <div class="col-3">
-                    <Image src="https://cdn.pixabay.com/photo/2017/02/16/23/10/smile-2072907_960_720.jpg" alt="Image Text" preview width="150" height="150">
+                    <Image src="https://cdn.pixabay.com/photo/2017/02/16/23/10/smile-2072907_960_720.jpg" alt="Image Text" preview width="200" height="200">
                         <template #indicator>
                             <font-awesome-icon icon="eye" />
                         </template>
@@ -349,29 +406,28 @@
                         <InputText id="cedula" type="text" v-model="cedula" :disabled="true"/>
                         <label for="cedula">Cedula</label>
                     </span>
-                    <span class="p-float-label text-left mt-4 col-9">
-                        <InputText id="name" type="text" v-model="name" :disabled="disabledBasicDatafields" class="w-full ml-1"/>
+                    <div class="p-float-label text-left mt-4 col-9">
+                        <InputText name="name" id="name" type="text" v-model="name" :disabled="disabledBasicDatafields" class="w-full ml-1"/>
                         <label for="name">Nombre y Apellidos</label>
-                    </span>
+                    </div>
                     <span class="p-float-label text-left mt-4 col-4">
                         <InputText id="size" type="text" v-model="size" :disabled="disabledBasicDatafields" class="w-full"/>
                         <label for="size">Estatura</label>
                     </span>
-                    <span class="p-float-label text-left mt-4 col-4">
-                        <InputText id="weight" type="text" v-model="weight" :disabled="disabledBasicDatafields" class="w-full"/>
-                        <label for="weight">Peso (Kg)</label>
-                    </span>
+                    <div class="p-float-label mt-4 col-4">
+                        <InputText id="birthCity" type="text" v-model="birthCity" :disabled="disabledBasicDatafields" class="w-full"/>
+                        <label for="birthCity">Ciudad de Nacimiento</label>
+                    </div>
                     <span class="p-float-label text-left mt-4 col-4">
                         <InputText id="age" type="text" v-model="age" :disabled="true" class="w-full"/>
                         <label for="age">Edad</label>
                     </span>
                 </div>
                 <div class="col-12 grid">
-                    <span class="col-3">
-                        <span>Paciente Hospitalizado</span><br>
-                        <InputSwitch v-model="hospitalized" class=" mt-2"/>
-                    </span>
-                    <span class="p-float-label text-left mt-4 col-3">
+                    <!-- <span class="col-3 align-self-center">
+                         <Chip class="px-5 bg-blue-100" label="Paciente Hospitalizado" />
+                    </span> -->
+                    <span class="p-float-label text-left mt-4 col-3 col-offset-3">
                         <Dropdown id="gender" :options="genders" v-model="gender" class="w-full" :disabled="disabledBasicDatafields"/>
                         <label for="gender">Genero</label>
                     </span>
@@ -392,7 +448,7 @@
             </div>
         </TabPanel>
 
-        <!-- *** BACKGROUNDS *** -->
+    <!-- *** BACKGROUNDS *** -->
         <TabPanel header="Antecedentes">
             <div class="col-12 flex justify-content-start relative">
                 <Button icon="pi pi-pencil" label="Editar" @click="disabledBackgorunds=false" v-show="disabledBackgorunds" class="p-button-success absolute top-0"></Button>
@@ -413,7 +469,7 @@
             Content III
         </TabPanel>
 
-        <!-- *** MEDICAL RECORD *** -->
+    <!-- *** MEDICAL RECORD *** -->
         <TabPanel header="Historia Medica">
             <div class="grid">
                 <div class="col-2 flex align-content-center">
@@ -511,7 +567,7 @@
                             <SplitButton class="p-button-primary bg-primary mb-3 w-full align-items-center text-white pl-3" :model="medicalOrdersOptions"><font-awesome-icon icon="list-check" />Ordenes Medicas</SplitButton>
                         </div>
                         <div class="col flex flex-warp">
-                            <Button class="p-button-success mb-3 w-full"><font-awesome-icon icon="syringe" /><span class="ml-3">Control de Med</span></Button>
+                            <Button class="p-button-success mb-3 w-full" @click="displayMedicineControl=true"><font-awesome-icon icon="syringe" /><span class="ml-3">Control de Med</span></Button>
                         </div>
                     </div>
 
@@ -531,6 +587,7 @@
         </TabPanel>
     </TabView>
 
+<!-- *** DISPLAY MEDICAL ORDERS *** -->
     <Dialog v-model:visible="displayMedicalOrders" class="w-9">
         <template #header>
                 <h3 class="font-bold">Ordenes Medicas</h3>
@@ -540,7 +597,7 @@
                     <div v-for="(order, subIndex) in item.orders" :key="index" class="flex my-1">
                         <InputText :placeholder="subIndex+1" :disabled="true" class="w-2rem text-center h-auto py-1"/>
                         <div v-if="order.medicine" class="min-w-max py-1 ml-3 itemOrder" :class="`${subIndex % 2 == 0 ? 'bg-custom-1' : 'bg-custom-2'}`"> {{ order.medicine }} </div>
-                        <div v-if="order.medicine" class="min-w-max py-1 mx-1 itemOrder" :class="`${subIndex % 2 == 0 ? 'bg-custom-1' : 'bg-custom-2'}`"> {{ order.posology }} </div>
+                        <div v-if="order.medicine" class="min-w-max py-1 mx-1 itemOrder" :class="`${subIndex % 2 == 0 ? 'bg-custom-1' : 'bg-custom-2'}`"> {{ order.posology.description }} </div>
                         <div v-if="order.medicine" class="col py-1 itemOrder" :class="`${subIndex % 2 == 0 ? 'bg-custom-1' : 'bg-custom-2'}`"> {{ order.notes }} </div>
                         <div v-if="order.customOrder" class="col py-1 ml-3 itemOrder" :class="`${subIndex % 2 == 0 ? 'bg-custom-1' : 'bg-custom-2'}`"> {{ order.customOrder }} </div>
                     </div>
@@ -550,6 +607,7 @@
             </Accordion>
     </Dialog>
 
+<!-- *** ADD MEDICAL ORDERES *** -->
     <Dialog v-model:visible="displayMedicalOrdersForm" class="w-9">
         <template #header>
             <h3 class="font-bold">Ordenes Medicas</h3>
@@ -558,21 +616,21 @@
             <div v-for="(item, index) in medicalOrdersItems" :key="index"  class="flex gap-1 col-12">
                 <InputText :placeholder="index+1" :disabled="true" class="w-2rem text-center"/>
                 <InputText id="medicine" v-model="medicalOrdersItems[index].medicine" v-if="medicalOrdersItems[index].medicine" class="col-3" type="text" placeholder="Medicamento" :disabled="true"/>
-                <InputText id="posology" v-model="medicalOrdersItems[index].posology" v-if="medicalOrdersItems[index].medicine" type="text" class="col" placeholder="Posologia" :disabled="true"/>
-                <InputText id="notes" v-model="medicalOrdersItems[index].notes" v-if="medicalOrdersItems[index].medicine" type="text" class="col-3" placeholder="Observaciones" :disabled="true"/>
+                <InputText id="posology" v-model="medicalOrdersItems[index].posology.description" v-if="medicalOrdersItems[index].medicine" type="text" class="col-3" placeholder="Posologia" :disabled="true"/>
+                <InputText id="notes" v-model="medicalOrdersItems[index].notes" v-if="medicalOrdersItems[index].medicine" type="text" class="col" placeholder="Observaciones" :disabled="true"/>
                 <InputText id="description" v-model="medicalOrdersItems[index].customOrder" v-if="medicalOrdersItems[index].customOrder" type="text" class="col-11" placeholder="Escriba la orden aqui" :disabled="true"></InputText>
                 <Button class="p-button-rounded p-button-danger" icon="pi pi-times" @click="removeMedicalOrder(index)"></Button>
             </div>
             
             <div class="col-12">
                 <label for="orderType" class="font-bold">Tipo de Orden</label>
-                <SelectButton id="orderType" v-model="orderType" :options="medicalOrderType" />
+                <SelectButton id="orderType" v-model="orderType" :options="medicalOrderType" @click="resetMedicalOrders"/>
             </div>
             <div class="col-12">
                 <div class="flex gap-1" v-if="orderType=='Medicamentos'" >
                     <InputText v-model="medicine"  class="col-3" type="text" placeholder="Medicamento" autofocus/>
-                    <InputText v-model="posology"  type="text" class="col-5" placeholder="Posologia"/>
-                    <InputText v-model="notes"  type="text" class="col-3" placeholder="Observaciones"/>
+                    <Dropdown v-model="posology" :options="frecuency" optionLabel="description" placeholder="Posologia" class="col-3"/>
+                    <InputText v-model="notes"  type="text" class="col" placeholder="Observaciones"/>
                     <Button class="p-button-rounded p-button-success" icon="pi pi-plus" @click="addMedicalOrder"></Button>
                 </div>
                 <div class="flex gap-1" v-if="orderType!='Medicamentos'" >
@@ -589,7 +647,7 @@
     </Dialog>
 
 
-    <!-- *** New Entry form *** -->
+<!-- *** New Entry form *** -->
     <Dialog v-model:visible="displayNewEntryForm" :maximizable="true" class="m-5 w-7 h-60">
         <template #header>
             <Chip class="px-5 py-3 bg-blue-100 font-bold w-full mr-3">NUEVO INGRESO</Chip>
@@ -659,6 +717,7 @@
         </template>
     </Dialog>
 
+<!-- *** SHOW MEDICAL DOC *** -->
     <Dialog v-model:visible="showMedicalDocForm" :maximizable="true" class="m-5 w-6 h-6">
         <template #header>
             <h3 class="font-bold"> {{ medicalDocForm.title }} </h3>
@@ -667,10 +726,11 @@
             <p> {{ medicalDocForm.content }} </p>
 
         <template #footer>
-                <h3 class="font-bold"> {{ medicalDocForm.signedBy }} </h3>
+            <h3 class="font-bold"> {{ medicalDocForm.signedBy }} </h3>
         </template>
     </Dialog>
 
+<!-- *** ADD MEDICAL DOCS *** -->
     <Dialog v-model:visible="showNewMedicalDocForm" class="m-5 max-w-max h-8">
         <template #header>
             <h3 class="font-bold"> Nuevo Documento Medico </h3>
@@ -692,6 +752,20 @@
         </template>
     </Dialog>
 
+<!-- *** MEDICINE CONTROL *** -->
+    <Dialog v-model:visible="displayMedicineControl" class="col-8">
+        <template #header>
+            <h3 class="font-bold">Control de Medicamentos</h3>
+        </template>
+            <DataTable :value="dataTable">
+                <Column field="medicine" header="Medicamento"></Column>
+                <Column field="Via" header="Via"></Column>
+                <Column field="posology.description" header="Frecuencia"></Column>
+                <Column field="posology." header="Dosis"></Column>
+            </DataTable>
+            <Button @click="calMedicinesFrecuency">Calcular Dosis de Medicamentos</Button>
+    </Dialog>
+
 </template>
 
 <style scoped>
@@ -708,11 +782,11 @@
     }
 
     .bg-custom-1 {
-        background-color: rgb(0, 85, 165);
-        color: #ffffff;
+        background-color: rgb(220, 245, 253);
+        color: #000000;
     }
     .bg-custom-2 {
-        background-color: #75bef8;
+        background-color: #fdfdfd;
         color: #000000;
     }
 </style>

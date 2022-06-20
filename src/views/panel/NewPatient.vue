@@ -18,6 +18,7 @@
     import Button from 'primevue/button'
     import ConfirmDialog from 'primevue/confirmdialog'
     import { useConfirm } from "primevue/useconfirm"
+    import ToggleButton from 'primevue/togglebutton'
 
     const toast = useToast()
     const router = useRouter()
@@ -26,6 +27,7 @@
         patient_id: '',
         name: '',
         nationalityType: 'V',
+        birthCity: '',
         birthday: null,
         size: 1.6,
         gender: 'Fem',
@@ -47,6 +49,7 @@
         newPatient.patient_id= ''
         newPatient.name= ''
         newPatient.nationalityType= 'V'
+        newPatient.birthCity= null
         newPatient.birthday= null
         newPatient.size= 1.6
         newPatient.gender= 'Fem'
@@ -171,13 +174,19 @@
                     <label for="inputName">Nombres y Apellidos</label>
                 </span>
             </div>
-            <div class="field col-5">
+            <div class="field col-3">
+                <span class="p-float-label">
+                    <InputText id="birthday" type="text" v-model="newPatient.birthCity" :disabled="disabledFields" class="w-full"/>
+                    <label for="birthday" class="text-sm">Ciudad de Nacimiento</label>
+                </span>
+            </div>
+            <div class="field col-4">
                 <span class="p-float-label">
                     <Calendar id="birthday" v-model="newPatient.birthday" :disabled="disabledFields" class="w-full"/>
                     <label for="birthday" class="text-sm">Fecha de Nacimiento</label>
                 </span>
             </div>
-            <div class="field col-5">
+            <div class="field col-3">
                 <span class="p-float-label">
                     <InputNumber id="size" v-model="newPatient.size" :min="0.40" :max="2.5" mode="decimal" suffix=" metros" :step="0.01" showButtons :disabled="disabledFields" class="w-full"/>
                     <label for="size">Estatura</label>
@@ -239,10 +248,13 @@
                     <label for="profesion">Profesion</label>
                 </span>
             </div>
-             <div class="flex col-6 align-content-center justify-content-center gap-3">
+            <div class="col-12">
+                <ToggleButton v-model="newPatient.hospitalized" onLabel="Hospitalizado" offLabel="Hospitalizar?" onIcon="pi pi-check" offIcon="pi pi-times" :disabled="disabledFields"/>
+            </div>
+             <!-- <div class="flex col-6 align-content-center justify-content-center gap-3">
                 <label for="hopitalized">Hospitalizar</label>
                 <InputSwitch id="hopitalized" v-model="newPatient.hospitalized" />
-            </div>
+            </div> -->
             <!--<div class="field col-6">
                     <label for="advise">En Espera para consulta</label><br/>
                     <InputSwitch id="advise" v-model="newPatient.waitingAdvise" /><br/>
