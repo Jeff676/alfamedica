@@ -1,5 +1,5 @@
 <script setup>
-    import { onMounted, ref, reactive } from 'vue'
+    import { onMounted, ref, reactive, provide } from 'vue'
     import { useRoute } from 'vue-router'
     import { onGetMedicalRecordDocs, onGetMedicalRecord, getMedicalOrders, addMedicalOrders, getPatientData, getMedicalRecord, addMedicalRecord, getMedicalDocs, addMedicalDoc, updateBackgrounds, updateBasicInfo, updateState } from '@/firebase/patients'
 
@@ -21,10 +21,12 @@
     import SelectButton from 'primevue/selectbutton'
     import DataTable from 'primevue/datatable'
     import Column from 'primevue/column'
+    import ToggleButton from 'primevue/togglebutton'
     import ColumnGroup from 'primevue/columngroup'
     import Row from 'primevue/row'
 
     import Evolutions from '../../components/Evolutions.vue'
+    import DrugsControl from '@/components/DrugsControl.vue'
 
     // helpers
     import { patientAge } from '@/helpers/patients'
@@ -262,7 +264,7 @@
     // *** Var Init ***
     const displayMedicalOrdersForm = ref(false)
     const displayMedicalOrders = ref(false)
-    const displayMedicineControl = ref(false)
+    const displayDrugsControl = ref(false)
     const medicalOrderType = ref(['Medicamentos', 'Comentarios u Otros'])
     var orderType = ref('Medicamentos')
 
@@ -370,6 +372,40 @@
     }
 
     const activeIndexPanelPatient = ref(0)
+
+    /* *** DRUGS CONTROL *** */
+    // const supplied = ref(false)
+    // const drugs = [
+    //     {
+    //         name : 'Notolac 30mg',
+    //         via : 'EV',
+    //         frecuency : 12,
+    //         startDate: new Date(),
+    //         dosis: '10:00 pm'
+    //     },
+    //     {
+    //         name : 'Ceftriaxona 50mg',
+    //         via : 'EV',
+    //         frecuency : 8,
+    //         startDate: new Date(),
+    //         dosis: function() {
+    //             const nextDosis = this.startDate + this.frecuency * 3600
+    //             console.log()
+    //         }
+    //     },
+    // ]
+
+    const drug = reactive([
+        {
+            drug: 'Notolac 30mg',
+            startDate: new Date(),
+            nDosis: 3,
+            frecuency: 6,
+            dosis:[ { "schedule": "10:43 pm", "supplied": false }, { "schedule": "4:43 am", "supplied": false }]
+        }
+    ])
+
+    provide('drugs', drug)
 
 
     onMounted( async () => {
@@ -567,7 +603,7 @@
                             <SplitButton class="p-button-primary bg-primary mb-3 w-full align-items-center text-white pl-3" :model="medicalOrdersOptions"><font-awesome-icon icon="list-check" />Ordenes Medicas</SplitButton>
                         </div>
                         <div class="col flex flex-warp">
-                            <Button class="p-button-success mb-3 w-full" @click="displayMedicineControl=true"><font-awesome-icon icon="syringe" /><span class="ml-3">Control de Med</span></Button>
+                            <Button class="p-button-success mb-3 w-full" @click="displayDrugsControl=true"><font-awesome-icon icon="syringe" /><span class="ml-3">Control de Med</span></Button>
                         </div>
                     </div>
 
@@ -752,18 +788,31 @@
         </template>
     </Dialog>
 
-<!-- *** MEDICINE CONTROL *** -->
-    <Dialog v-model:visible="displayMedicineControl" class="col-8">
+<!-- *** DRUGS CONTROL *** -->
+    <Dialog v-model:visible="displayDrugsControl"  maximizable>
         <template #header>
             <h3 class="font-bold">Control de Medicamentos</h3>
         </template>
-            <DataTable :value="dataTable">
-                <Column field="medicine" header="Medicamento"></Column>
-                <Column field="Via" header="Via"></Column>
-                <Column field="posology.description" header="Frecuencia"></Column>
-                <Column field="posology." header="Dosis"></Column>
-            </DataTable>
-            <Button @click="calMedicinesFrecuency">Calcular Dosis de Medicamentos</Button>
+        <DrugsControl/>
+            <!-- <DataTable :value="drugs">
+                <Column field="item" header="Item"></Column>
+                <Column field="name" header="Medicamento"></Column>
+                <Column field="via" header="Via"></Column>
+                <Column field="startDate" header="Fecha de Inicio"></Column>
+                <Column field="frecuency" header="Frecuencia"></Column>
+                <Column field="dosis" header="Dosis" class="col-5 text-align-center">
+                    <template #body="slotProps">
+                        <ToggleButton v-model="supplied" :onLabel="slotProps.data.dosis" :offLabel="slotProps.data.dosis" onIcon="pi pi-check" offIcon="pi pi-times" class="m-1" />
+                        <ToggleButton v-model="supplied" :onLabel="slotProps.data.dosis" :offLabel="slotProps.data.dosis" onIcon="pi pi-check" offIcon="pi pi-times" class="m-1" />
+                        <ToggleButton v-model="supplied" :onLabel="slotProps.data.dosis" :offLabel="slotProps.data.dosis" onIcon="pi pi-check" offIcon="pi pi-times" class="m-1" />
+                        <ToggleButton v-model="supplied" :onLabel="slotProps.data.dosis" :offLabel="slotProps.data.dosis" onIcon="pi pi-check" offIcon="pi pi-times" class="m-1" />
+                        <ToggleButton v-model="supplied" :onLabel="slotProps.data.dosis" :offLabel="slotProps.data.dosis" onIcon="pi pi-check" offIcon="pi pi-times" class="m-1" />
+                        <ToggleButton v-model="supplied" :onLabel="slotProps.data.dosis" :offLabel="slotProps.data.dosis" onIcon="pi pi-check" offIcon="pi pi-times" class="m-1" />
+                    </template>
+                    <ToggleButton v-model="checked" onLabel="I confirm" offLabel="I reject" onIcon="pi pi-check" offIcon="pi pi-times" />
+                </Column>
+            </DataTable> -->
+            <!-- <Button @click="calMedicinesFrecuency">Calcular Dosis de Medicamentos</Button> -->
     </Dialog>
 
 </template>
@@ -789,4 +838,9 @@
         background-color: #fdfdfd;
         color: #000000;
     }
+    .p-togglebutton.p-button:not(.p-disabled):not(.p-highlight) {
+        background-color: red;
+        color: #fdfdfd;
+    }
+ 
 </style>

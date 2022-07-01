@@ -31,7 +31,8 @@ const router = createRouter({
         {path: 'dashboard',     name: 'dashboard',      component: () => import('@/views/panel/Dashboard.vue')},
         {path: 'kpis',          name: 'kpis',           component: () => import('@/views/panel/Kpis.vue')},
         {path: 'newPatient',    name: 'newPatient',     component: () => import('@/views/panel/NewPatient.vue')},
-        {path: 'medicalrecord/:patientid', name: 'medicalRecord',  component: () => import('@/views/panel/MedicalRecord.vue')}
+        {path: 'medicalrecord/:patientid', name: 'medicalRecord',  component: () => import('@/views/panel/MedicalRecord.vue')},
+        {path: 'drugscontrol',    name: 'drugscontrol', component: () => import('@/views/panel/DrugsControl.vue')},
       ]
     },
     {
